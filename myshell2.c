@@ -24,21 +24,23 @@ void printPrompt(){
   getcwd(cwd,sizeof(cwd));
   gethostname(hostname,sizeof(hostname));
 
-  info->tm_hour = (info->tm_hour + KST)%24;
+  info->tm_hour = (info->tm_hour + KST) % 24;
   strftime(time_str, 15,"[%I:%M:%S %p]", info);
-  printf("%s" GRN " %s@%s" RESET CYN "(%s)"RESET"$" ,
-		  time_str,hostname,getenv("USER"),cwd);
+  printf("%s" GRN " %s@%s" RESET CYN "(%s)" RESET "$ ",
+		  time_str,getenv("USER"),hostname,cwd);
 }
 
 int parseInput(char* str, char** parsed){
-  for(int i = 0 ; i < MAXARG ; i++){
+  for(int i = 0; i < MAXARG; i++){
     parsed[i] = strsep(&str, " ");
     if(parsed[i] == NULL) break;
-    if(strlen(parsed[i])==0) i--;
   }
-  if(!strcmp(parsed[0],"exit")) return 1;
+  if(!strcmp(parsed[0],"exit"))
+    return 1;
   if(!strcmp(parsed[0],"cd")){
-    chdir(parsed[1]);
+    if(chdir(parsed[1])){
+      printf("failed to cd\n");
+    }
     return 2;
   }
   return 0;
@@ -52,10 +54,9 @@ int main(){
   
   printPrompt();
   while(fgets(buf,MAXLINE,stdin)!=NULL){ 
-    if(buf[strlen(buf)-1] = '\n')
-      buf[strlen(buf)-1] = 0;
+    buf[strlen(buf) - 1] = 0;
     int tag = parseInput(buf,parsed);
-    if(tag==1){
+    if(tag == 1){
       printf("Good bye\n");
       exit(0);   
     }
@@ -63,17 +64,15 @@ int main(){
       printPrompt();
       continue;
     }
-    if((pid = fork())<0){
+    if((pid = fork()) < 0){
       fprintf(stderr,"fork error");
-      printf("fork error\n");
-    }else if (pid == 0 ){
+    }else if (pid == 0){
       execvp(parsed[0],parsed);    
-      fprintf(stderr,"couldn't execute: %s \n",buf);
+      fprintf(stderr,"couldn't execute: %s\n",buf);
       exit(127);
     }
-    if((pid = waitpid(pid,&status,0))<0){
+    if((pid = waitpid(pid,&status,0)) < 0){
       fprintf(stderr,"waitpid error\n");
-      printf("child end");
     }
     printPrompt();
   }
